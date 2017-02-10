@@ -51,7 +51,7 @@ function buildFexLibrary(varargin)
 
 %% Parse inputs.
 p = inputParser;
-p.FunctionName = 'buildFEXlibrary';
+p.FunctionName = 'buildFexLibrary';
 
 p.addOptional('fileList',myFexList,@(x) validateattributes(x,{'cell'},{}));
 p.addParameter('destination','',@(x) exist(x,'dir'));
@@ -115,7 +115,7 @@ for i = 1:size(files,1)
         if r.useCheckVersion
             [status,message] = checkVersion(f,id,'silent');
         else
-            status = 'Version check skipped';
+            status = 'version check skipped';
         end
     else
         status = 'git';
@@ -127,8 +127,8 @@ for i = 1:size(files,1)
 
             fprintf('%s (version %s): %s\n',status,message,f)
         
-        case {'unknown','error','Version check skipped'}
-            fprintf('%s | Attempting download: %s\n',status,f)            
+        case {'unknown','error','version check skipped'}
+            fprintf('%s | attempting download: %s\n',status,f)            
             try
                 fileUrl=sprintf('%s%i?controller=file_infos&download=true',...
                     baseURL,id);
@@ -138,19 +138,19 @@ for i = 1:size(files,1)
             catch 
                 % Could be a non-zip download. 
                 try
-                    fprintf('Trying download of non-zipped m-file: %s\n',f)
+                    fprintf('trying download of non-zipped m-file: %s\n',f)
                     websave([f '.m'],fileUrl);
                 catch
                     beep
                     fprintf('\tFailed: <a href="%s">%s</a>.\n',...
                         sprintf('%s%i',baseURL,id),...
-                        'Try manual download');
+                        'try manual download');
                     web(sprintf('%s%i',baseURL,id),'-browser');
                 end
             end
             
         case 'git'
-            fprintf('Attempting GitHub download: %s\n',f)
+            fprintf('attempting GitHub download: %s\n',f)
             try % try git download                
                 fileUrl=sprintf...
                     ('https://github.com/%s/archive/master.zip',git);
@@ -161,7 +161,7 @@ for i = 1:size(files,1)
                 beep
                 fprintf('\tGit failed: <a href="%s">%s</a>.\n',...
                     sprintf('%s%i',baseURL,id),...
-                    'Try manual download');
+                    'try manual download');
                 web(sprintf('%s%i',baseURL,id),'-browser');
             end
     end
@@ -194,4 +194,5 @@ cd(s);
     Moved default list out of function file.
     Made fileList first argument instead of name/value pair.
     Name change for style.
+2017-02-09 Revisino history now on git.
 %}
