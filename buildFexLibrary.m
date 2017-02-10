@@ -85,29 +85,21 @@ if isempty(r.destination)
     r.destination = uigetdir('','Choose destination for FEX library files.');
 end
 
+%%
+baseURL = 'http://www.mathworks.com/matlabcentral/fileexchange/';
+
+%% Download and add to path checkVerion if needed and not available already:
+if r.useCheckVersion && ~exist('checkVersion.m','file')
+    disp('checkVersion not available. Downloading and adding to path....')
+    buildFexLibrary({'checkVersion',39993},'destination',r.destination,...
+        'useCheckVersion',false,... % Don't rely on defaults.
+        'addToPath',true)
+end
+
 %% 
 s = pwd; % To come back here later.
 cd(r.destination) % Move to destination directory.
 warning off MATLAB:MKDIR:DirectoryExists
-
-%%
-baseURL = 'http://www.mathworks.com/matlabcentral/fileexchange/';
-
-
-%% Get checkVerion if not available already:
-if r.useCheckVersion && ~exist('checkVersion.m','file')
-%     TODO: may be possible to simply call this function within itself to
-%     accomplish this block.
-    mkdir('checkVersion');
-    cd('checkVersion')
-    fileUrl=sprintf('%s%i?controller=file_infos&download=true',...
-        baseURL,39993);
-    
-    unzip(fileUrl);
-    cd ..
-    addpath([destination filesep 'checkVersion'],'-end')
-end
-
 
 %% Get files
 for i = 1:size(files,1)
@@ -181,12 +173,12 @@ for i = 1:size(files,1)
         fclose(fid);
     end
     
-    cd ..
+    cd(r.destination)
 end
 
 if r.addToPath
     % Add FEX functions to end of path.
-    addpath(genpath(pwd),'-end');
+    addpath(genpath(r.destination),'-end');
     savepath
 end
 
