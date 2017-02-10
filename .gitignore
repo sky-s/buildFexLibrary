@@ -39,3 +39,6 @@ octave-workspace
 
 # Simulink autosave extension
 .autosave
+
+# Dev files
+files

@@ -41,7 +41,7 @@ function buildFexLibrary(varargin)
 % 
 % 
 %   Example: Download the latest version of this tool.
-%     buildFexLibrary({'build FEX library',54832});
+%     buildFexLibrary({'build FEX library',54832,'sky-s/buildFexLibrary'});
 % 
 %   See also addpath, path, 
 %     checkVersion - www.mathworks.com/matlabcentral/fileexchange/39993.
