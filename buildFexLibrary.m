@@ -21,12 +21,6 @@ function buildFexLibrary(varargin)
 %     If provided, BUILDFEXLIBRARY will use the directory provided instead of
 %     prompting the user for a destination directory. The provided destination
 %     should be a full path, and the directory must already exist.
-% 
-%   useCheckVersion
-%     If set, BUILDFEXLIBRARY will first attempt to use checkVersion before
-%     blindly downloading the entry. Default useCheckVersion = false. Note: the
-%     subfolder will be created (but not populated) even if checkVersion finds
-%     the entry on the path elsewhere.
 %     
 %   addToPath
 %     If set, BUILDFEXLIBRARY will add everything in the destination folder to
@@ -37,6 +31,15 @@ function buildFexLibrary(varargin)
 %     If set, BUILDFEXLIBRARY will crete an internet shortcut to the FEX entry
 %     webpage in the created entry's folder. Default makeShortcut = true.
 % 
+%   silent
+%     If set, only failed download information is displayed in the command
+%     window during execution. Default silent = false.
+% 
+%   useCheckVersion
+%     If set, BUILDFEXLIBRARY will attempt to use checkVersion and only use its
+%     internal installer if checkVersion fails. Default useCheckVersion = false.
+%     Note: the subfolder will be created (but not populated) even if
+%     checkVersion finds the entry on the path elsewhere.
 % 
 %   Example: Download the latest version of this tool.
 %     buildFexLibrary({'build FEX library',54832});
@@ -61,6 +64,8 @@ p.addParameter('useCheckVersion',false,@(x) validateattributes(x,...
     {'numeric','logical'},{'scalar'}));
 p.addParameter('makeShortcut',true,@(x) validateattributes(x,...
     {'numeric','logical'},{'scalar'}));
+p.addParameter('silent',false,@(x) validateattributes(x,...
+    {'numeric','logical'},{'scalar'}));
 
 
 parse(p,varargin{:});
@@ -84,10 +89,13 @@ baseURL = 'http://www.mathworks.com/matlabcentral/fileexchange/';
 
 %% Download and add to path checkVerion if needed and not available already:
 if r.useCheckVersion && ~exist('checkVersion.m','file')
-    disp('checkVersion not available. Downloading and adding to path....')
+    if ~r.silent
+        disp('checkVersion not available - installing...')
+    end
     buildFexLibrary({'checkVersion',39993},'destination',r.destination,...
         'useCheckVersion',false,... % Don't rely on defaults.
-        'addToPath',true)
+        'addToPath',true,...
+        'silent',r.silent)
 end
 
 %% 
@@ -100,11 +108,11 @@ for i = 1:size(files,1)
     f = files{i,1};
     id = files{i,2};
     
+    mkdir(f)
+    cd(f)
+        
     if r.useCheckVersion
-        mkdir(f)
-        cd(f)
         [status,message] = checkVersion(f,id,'silent');
-        cd(r.destination)
     else
         status = 'version check skipped';
     end
@@ -112,43 +120,59 @@ for i = 1:size(files,1)
     switch status
         case {'up-to-date' 'downloaded'}
             % checkVersion did its thing; do nothing.
-            fprintf('%s (version %s): %s\n',status,message,f)
-            
+            if ~r.silent
+                fprintf('%s (version %s): %s\n',status,message,f)
+            end
         otherwise % 'unknown','error','version check skipped'
             fileUrl = sprintf('%s%i?download=true',baseURL,id);
             
-            fprintf('%s | attempting download: %s\n',status,f)
+            if r.useCheckVersion
+                prefix = sprintf('checkVersion failed with status: %s | ',...
+                    status);
+            else
+                prefix = '';
+            end
+            if ~r.silent
+                fprintf('%sdownloading: %s\n',prefix,f)
+            end
             
             tmp_name = tempname;
             try
-                unzip(websave(tmp_name,fileUrl),f); 
+                unzip(websave(tmp_name,fileUrl),pwd); 
                 % Save first to handle GitHub redirect.
+                
             catch
                 % Could be a non-zipped download (very old FEX entries).
-                try
+                if ~r.silent
                     fprintf(['%s failed; making attempt assuming old-style '...
                         'non-zipped m-file\n'],f)
-                    websave([f filesep f '.m'],fileUrl);
+                end
+                try
+                    nonZipName = [f '.m'];
+                    websave(nonZipName,fileUrl);
                 catch
-                    beep
-                    fprintf('\Something went wrong: <a href="%s">%s</a>.\n',...
-                        sprintf('%s%i',baseURL,id),...
-                        'opening FEX page of failed download');
-                    web(sprintf('%s%i',baseURL,id),'-browser');
+                    try delete(nonZipName); end %#ok
+                    
+                    webUrl = sprintf('%s%i',baseURL,id);
+                    command = sprintf('matlab:web(''%s'',''-browser'')',webUrl);
+                    linkTxt = sprintf('FEX page of failed download: %s',f);
+                    fprintf('%s | <a href="%s">%s</a>\n',...
+                        'something went wrong', command, linkTxt);
                 end
             end  
-            try delete(tmp_name); end %#ok<TRYNC>
+            try delete(tmp_name); end %#ok
             
             
     end % switch
     
     if r.makeShortcut
         % Add internet shortcut (overwrites).
-        fid = fopen([f filesep '_' f ' on FEX.url'],'w');
+        fid = fopen(['_' f ' on FEX.url'],'w');
         fprintf(fid,'[InternetShortcut]\nURL=%s%i',baseURL,id);
         fclose(fid);
     end
     
+    cd(r.destination)
 end
 
 if r.addToPath
@@ -169,5 +193,5 @@ cd(s);
     Moved default list out of function file.
     Made fileList first argument instead of name/value pair.
     Name change for style.
-2017-02-09 Revision history now on git.
+2017-02-09 See git.
 %}
