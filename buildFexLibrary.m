@@ -4,15 +4,13 @@ function buildFexLibrary(varargin)
 %   
 %   BUILDFEXLIBRARY(fileList) will prompt the user to select or create a
 %   destination for the FEX library and then attempt to download each FEX entry
-%   in the list into its own subfolder. fileList must be an n x 2 or n x 3 cell
-%   array, where each row corresponds to a single FEX entry.
+%   in the list into its own subfolder. fileList must be an n x 2 cell array, 
+%   where each row corresponds to a single FEX entry.
 %     - The first element in each row contains a name for the entry. The name is
 %       chosen by the user. A folder will be created in the destination with
 %       this name. 
 %     - The second element is the numeric identifier for the FEX entry, found in
 %       the entry's URL.
-%     - The third element is a string of the form 'GitHubUser/RepositoryName',
-%       if the entry is hosted on GitHub.
 %   If not provided, default fileList = myFexList.
 %
 % 
@@ -21,8 +19,8 @@ function buildFexLibrary(varargin)
 % 
 %   destination
 %     If provided, BUILDFEXLIBRARY will use the directory provided instead of
-%     prompting the user for a destination directory. An error is returned if
-%     the directory does not exist.
+%     prompting the user for a destination directory. The provided destination
+%     should be a full path, and the directory must already exist.
 % 
 %   useCheckVersion
 %     If set, BUILDFEXLIBRARY will first attempt to use checkVersion before
@@ -41,7 +39,7 @@ function buildFexLibrary(varargin)
 % 
 % 
 %   Example: Download the latest version of this tool.
-%     buildFexLibrary({'build FEX library',54832,'sky-s/buildFexLibrary'});
+%     buildFexLibrary({'build FEX library',54832});
 % 
 %   See also addpath, path, 
 %     checkVersion - www.mathworks.com/matlabcentral/fileexchange/39993.
@@ -53,9 +51,10 @@ function buildFexLibrary(varargin)
 p = inputParser;
 p.FunctionName = 'buildFexLibrary';
 
-p.addOptional('fileList',myFexList,@(x) validateattributes(x,{'cell'},{}));
-p.addParameter('destination','',@(x) exist(x,'dir'));
+p.addOptional('fileList',myFexList,@(x) validateattributes(x,...
+    {'cell'},{'ncols',2}));
 
+p.addParameter('destination','',@(x) exist(x,'dir'));
 p.addParameter('addToPath',true,@(x) validateattributes(x,...
     {'numeric','logical'},{'scalar'}));
 p.addParameter('useCheckVersion',false,@(x) validateattributes(x,...
@@ -73,11 +72,6 @@ validateattributes([files{:,2}],{'numeric'},{'integer','positive'},...
     mfilename,'second column of fileList');
 if ~iscellstr(files(:,1))
     error('Column 1 of fileList must contain strings.')
-end
-if size(files,2) < 3 
-    % Third column missing, i.e. nothing in the list lives on GitHub.
-    % (NB: the files{:,2} line above makes sure there are at least two colums.)
-    files = [files cell(size(files,1),1)];
 end
 
 
@@ -105,75 +99,56 @@ warning off MATLAB:MKDIR:DirectoryExists
 for i = 1:size(files,1)
     f = files{i,1};
     id = files{i,2};
-    git = files{i,3};
     
-    mkdir(f)
-    cd(f)
-    
-    % don't even bother with git files
-    if isempty(git)
-        if r.useCheckVersion
-            [status,message] = checkVersion(f,id,'silent');
-        else
-            status = 'version check skipped';
-        end
+    if r.useCheckVersion
+        mkdir(f)
+        cd(f)
+        [status,message] = checkVersion(f,id,'silent');
+        cd(r.destination)
     else
-        status = 'git';
+        status = 'version check skipped';
     end
         
     switch status
         case {'up-to-date' 'downloaded'}
-            % do nothing.
-
+            % checkVersion did its thing; do nothing.
             fprintf('%s (version %s): %s\n',status,message,f)
-        
-        case {'unknown','error','version check skipped'}
-            fprintf('%s | attempting download: %s\n',status,f)            
+            
+        otherwise % 'unknown','error','version check skipped'
+            fileUrl = sprintf('%s%i?download=true',baseURL,id);
+            
+            fprintf('%s | attempting download: %s\n',status,f)
+            
+            tmp_name = tempname;
             try
-                fileUrl=sprintf('%s%i?controller=file_infos&download=true',...
-                    baseURL,id);
-                
-                unzip(fileUrl);
-                
-            catch 
-                % Could be a non-zip download. 
+                unzip(websave(tmp_name,fileUrl),f); 
+                % Save first to handle GitHub redirect.
+            catch
+                % Could be a non-zipped download (very old FEX entries).
                 try
-                    fprintf('trying download of non-zipped m-file: %s\n',f)
-                    websave([f '.m'],fileUrl);
+                    fprintf(['%s failed; making attempt assuming old-style '...
+                        'non-zipped m-file\n'],f)
+                    websave([f filesep f '.m'],fileUrl);
                 catch
                     beep
-                    fprintf('\tFailed: <a href="%s">%s</a>.\n',...
+                    fprintf('\Something went wrong: <a href="%s">%s</a>.\n',...
                         sprintf('%s%i',baseURL,id),...
-                        'try manual download');
+                        'opening FEX page of failed download');
                     web(sprintf('%s%i',baseURL,id),'-browser');
                 end
-            end
+            end  
+            try delete(tmp_name); end %#ok<TRYNC>
             
-        case 'git'
-            fprintf('attempting GitHub download: %s\n',f)
-            try % try git download                
-                fileUrl=sprintf...
-                    ('https://github.com/%s/archive/master.zip',git);
-                
-                unzip(fileUrl);
-                
-            catch
-                beep
-                fprintf('\tGit failed: <a href="%s">%s</a>.\n',...
-                    sprintf('%s%i',baseURL,id),...
-                    'try manual download');
-                web(sprintf('%s%i',baseURL,id),'-browser');
-            end
-    end
+            
+    end % switch
     
     if r.makeShortcut
         % Add internet shortcut (overwrites).
-        fid = fopen(['_' f ' on FEX.url'],'w');
+        fid = fopen([f filesep '_' f ' on FEX.url'],'w');
         fprintf(fid,'[InternetShortcut]\nURL=%s%i',baseURL,id);
         fclose(fid);
     end
     
-    cd(r.destination)
 end
 
 if r.addToPath
@@ -194,5 +169,5 @@ cd(s);
     Moved default list out of function file.
     Made fileList first argument instead of name/value pair.
     Name change for style.
-2017-02-09 Revisino history now on git.
+2017-02-09 Revision history now on git.
 %}
