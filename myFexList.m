@@ -31,6 +31,7 @@ fileList = {
     'lyt'                   44040
     'mcd'                   44043
     'mkxlsfunc'             40404
+    'plotm'                 62962
     'polygeom'                319
     'progressbar'            6922
     'randraw'                7309
@@ -38,11 +39,12 @@ fileList = {
     'regexpBuilder'         41899
     'scl'                   56624
     'search_luckysearch'    41357
-    'showOrigin'            61632
+    'showorigin'            61632
     'simps'                 25754
     'sinspace'              28358
     'speedtester'           43250
     'styleguide'            40795
+    'surfarea'              62992
     'tau'                   48636
     'txtmenu'               28285
     'units'                 38977
