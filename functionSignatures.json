@@ -1,0 +1,15 @@
+{
+"buildFexLibrary":
+{
+	"inputs":
+	[
+		
+		{"name":"fileList", "kind":"optional", "type":"cell"},
+		{"name":"destination", "kind":"namevalue", "type":"folderpath"},
+		{"name":"path", "kind":"flag", "type":"choices={'-noPathAppend'}"},
+		{"name":"shortcut", "kind":"flag", "type":"choices={'-noShortcut'}"},
+		{"name":"silent", "kind":"flag", "type":"choices={'-silent'}"},
+		{"name":"checkVersion", "kind":"flag", "type":"choices={'-useCheckVersion'}"}
+	]
+}
+}
