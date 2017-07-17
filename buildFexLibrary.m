@@ -14,13 +14,14 @@ function buildFexLibrary(varargin)
 %   If not provided, default fileList = myFexList.
 %
 %   BUILDFEXLIBRARY will use a specified directory instead of prompting the user
-%   for a destination directory if the 'directory' name/value pair is provided.
-%   The destination should be a full path, and the directory must already exist.
+%   for a destination directory if the 'destination' name/value pair is
+%   provided. The destination should be a full path, and the directory must
+%   already exist.
 %   
 %   Optional flags may be passed to BUILDFEXLIBRARY:
 % 
-%   -noPath
-%     Unless noPath is set, BUILDFEXLIBRARY will add everything in the
+%   -noPathAppend
+%     Unless noPathAppend is set, BUILDFEXLIBRARY will add everything in the
 %     destination folder to the end of the current search path as save the new
 %     path.
 % 
@@ -49,7 +50,7 @@ function buildFexLibrary(varargin)
 
 %% Parse inputs.
 % Parse flags:
-noPath = strcmpi('-noPath',varargin); varargin = varargin(~noPath);
+noPath = strcmpi('-noPathAppend',varargin); varargin = varargin(~noPath);
 addToPath = ~any(noPath);
 
 noShortcut = strcmpi('-noShortcut',varargin); varargin = varargin(~noShortcut);
