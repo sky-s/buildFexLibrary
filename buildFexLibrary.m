@@ -13,36 +13,33 @@ function buildFexLibrary(varargin)
 %       the entry's URL.
 %   If not provided, default fileList = myFexList.
 %
+%   BUILDFEXLIBRARY will use a specified directory instead of prompting the user
+%   for a destination directory if the 'directory' name/value pair is provided.
+%   The destination should be a full path, and the directory must already exist.
+%   
+%   Optional flags may be passed to BUILDFEXLIBRARY:
 % 
-%   Optional parameters may be provided as name/value pairs. Available
-%   parameters are:
+%   -noPath
+%     Unless noPath is set, BUILDFEXLIBRARY will add everything in the
+%     destination folder to the end of the current search path as save the new
+%     path.
 % 
-%   destination
-%     If provided, BUILDFEXLIBRARY will use the directory provided instead of
-%     prompting the user for a destination directory. The provided destination
-%     should be a full path, and the directory must already exist.
-%     
-%   addToPath
-%     If set, BUILDFEXLIBRARY will add everything in the destination folder to
-%     the end of the current search path as save the new path. Default addToPath
-%     = true.
+%   -noShortcut
+%     Unless noShortcut is set, BUILDFEXLIBRARY will crete an internet shortcut
+%     to the FEX entry webpage in the created entry's folder.
 % 
-%   makeShortcut
-%     If set, BUILDFEXLIBRARY will crete an internet shortcut to the FEX entry
-%     webpage in the created entry's folder. Default makeShortcut = true.
-% 
-%   silent
+%   -silent
 %     If set, only failed download information is displayed in the command
-%     window during execution. Default silent = false.
+%     window during execution.
 % 
-%   useCheckVersion
+%   -useCheckVersion
 %     If set, BUILDFEXLIBRARY will attempt to use checkVersion and only use its
-%     internal installer if checkVersion fails. Default useCheckVersion = false.
-%     Note: the subfolder will be created (but not populated) even if
-%     checkVersion finds the entry on the path elsewhere.
+%     internal installer if checkVersion fails. Note: the subfolder will be
+%     created (but not populated) even if checkVersion finds the entry on the
+%     path elsewhere.
 % 
 %   Example: Download the latest version of this tool.
-%     buildFexLibrary({'build FEX library',54832});
+%     buildFexLibrary({'build FEX library',54832},'destination',pwd,'-silent');
 % 
 %   See also addpath, path, 
 %     checkVersion - www.mathworks.com/matlabcentral/fileexchange/39993.
@@ -51,6 +48,21 @@ function buildFexLibrary(varargin)
 % Contact: www.mathworks.com/matlabcentral/fileexchange/authors/101715
 
 %% Parse inputs.
+% Parse flags:
+noPath = strcmpi('-noPath',varargin); varargin = varargin(~noPath);
+addToPath = ~any(noPath);
+
+noShortcut = strcmpi('-noShortcut',varargin); varargin = varargin(~noShortcut);
+makeShortcut = ~any(noShortcut);
+
+silent = strcmpi('-silent',varargin); varargin = varargin(~silent);
+silent = any(silent);
+
+useCheckVersion = strcmpi('-useCheckVersion',varargin); 
+varargin = varargin(~useCheckVersion);
+useCheckVersion = any(useCheckVersion);
+
+% Parse other inputs:
 p = inputParser;
 p.FunctionName = 'buildFexLibrary';
 
@@ -58,15 +70,6 @@ p.addOptional('fileList',myFexList,@(x) validateattributes(x,...
     {'cell'},{'ncols',2}));
 
 p.addParameter('destination','',@(x) exist(x,'dir'));
-p.addParameter('addToPath',true,@(x) validateattributes(x,...
-    {'numeric','logical'},{'scalar'}));
-p.addParameter('useCheckVersion',false,@(x) validateattributes(x,...
-    {'numeric','logical'},{'scalar'}));
-p.addParameter('makeShortcut',true,@(x) validateattributes(x,...
-    {'numeric','logical'},{'scalar'}));
-p.addParameter('silent',false,@(x) validateattributes(x,...
-    {'numeric','logical'},{'scalar'}));
-
 
 parse(p,varargin{:});
 r = p.Results;
@@ -88,14 +91,11 @@ end
 baseURL = 'http://www.mathworks.com/matlabcentral/fileexchange/';
 
 %% Download and add to path checkVerion if needed and not available already:
-if r.useCheckVersion && ~exist('checkVersion.m','file')
-    if ~r.silent
+if useCheckVersion && ~exist('checkVersion.m','file')
+    if ~silent
         disp('checkVersion not available - installing...')
     end
-    buildFexLibrary({'checkVersion',39993},'destination',r.destination,...
-        'useCheckVersion',false,... % Don't rely on defaults.
-        'addToPath',true,...
-        'silent',r.silent)
+    buildFexLibrary({'checkVersion',39993},'destination',r.destination)
 end
 
 %% 
@@ -111,7 +111,7 @@ for i = 1:size(files,1)
     mkdir(f)
     cd(f)
         
-    if r.useCheckVersion
+    if useCheckVersion
         [status,message] = checkVersion(f,id,'silent');
     else
         status = 'version check skipped';
@@ -120,19 +120,19 @@ for i = 1:size(files,1)
     switch status
         case {'up-to-date' 'downloaded'}
             % checkVersion did its thing; do nothing.
-            if ~r.silent
+            if ~silent
                 fprintf('%s (version %s): %s\n',status,message,f)
             end
         otherwise % 'unknown','error','version check skipped'
             fileUrl = sprintf('%s%i?download=true',baseURL,id);
             
-            if r.useCheckVersion
+            if useCheckVersion
                 prefix = sprintf('checkVersion failed with status: %s | ',...
                     status);
             else
                 prefix = '';
             end
-            if ~r.silent
+            if ~silent
                 fprintf('%sdownloading: %s\n',prefix,f)
             end
             
@@ -143,7 +143,7 @@ for i = 1:size(files,1)
                 
             catch
                 % Could be a non-zipped download (very old FEX entries).
-                if ~r.silent
+                if ~silent
                     fprintf(['%s failed; making attempt assuming old-style '...
                         'non-zipped m-file\n'],f)
                 end
@@ -165,7 +165,7 @@ for i = 1:size(files,1)
             
     end % switch
     
-    if r.makeShortcut
+    if makeShortcut
         % Add internet shortcut (overwrites).
         fid = fopen(['_' f ' on FEX.url'],'w');
         fprintf(fid,'[InternetShortcut]\nURL=%s%i',baseURL,id);
@@ -175,7 +175,7 @@ for i = 1:size(files,1)
     cd(r.destination)
 end
 
-if r.addToPath
+if addToPath
     % Add FEX functions to end of path.
     addpath(genpath(r.destination),'-end');
     savepath
@@ -183,15 +183,3 @@ end
 
 % Go back to original directory where we started.
 cd(s);
-
-% Revision History
-%{
-2016-01-10 First documented version created. Added this to default list.
-2016-01-20 Allow for 2-column file list if nothing on GitHub. 
-2017-01-24 Added some files to default list; some formatting.
-2017-02-07
-    Moved default list out of function file.
-    Made fileList first argument instead of name/value pair.
-    Name change for style.
-2017-02-09 See git.
-%}
