@@ -67,22 +67,30 @@ useCheckVersion = any(useCheckVersion);
 p = inputParser;
 p.FunctionName = 'buildFexLibrary';
 
-p.addOptional('fileList',myFexList,@(x) validateattributes(x,...
-    {'cell'},{'ncols',2}));
-
+p.addOptional('fileList',cell(0,2));
 p.addParameter('destination','',@(x) exist(x,'dir'));
 
 parse(p,varargin{:});
 r = p.Results;
 files = r.fileList;
 
-% Do more checks on file list:
+if isempty(files)
+    % Nothing provided - try using myFexList (prioritizing function over var).
+    if exist('myFexList','file')
+        files = myFexList;
+    else
+        % May be variable. If not, will throw exception.
+        files = evalin('caller','myFexList');
+    end
+end
+
+% Do checks on file list:
+validateattributes(files,{'cell'},{'ncols',2});
 validateattributes([files{:,2}],{'numeric'},{'integer','positive'},...
     mfilename,'second column of fileList');
 if ~iscellstr(files(:,1))
     error('Column 1 of fileList must contain strings.')
 end
-
 
 if isempty(r.destination)
     r.destination = uigetdir('','Choose destination for FEX library files.');
