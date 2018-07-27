@@ -14,9 +14,11 @@ fileList = {
     'buildFEXlibrary'       54832
     'carpetplot'            52272
     'cch'                   43264
+    'cell2str'              13999
     'CopyPaste'             28016
     'cosspace'              28337
     'cprintf'               24093
+    'cursorbar'             49612
     'dispdisp'              48637
     'disperse'              33866
     'explorestruct'          7828
@@ -25,7 +27,9 @@ fileList = {
     'fevaln'                53552
     'git'                   29154
     'goto'                   3145
+    'hatchfill'             30733
     'is___'                 61262
+    'labelpoints'           46891
     'Link'                  48638
     'linspace3'             28553
     'lyt'                   44040
